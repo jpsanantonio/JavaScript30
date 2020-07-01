@@ -1,22 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Type Ahead 👀</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Type Ahead 👀</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <form class="search-form">
+      <input type="text" class="search" placeholder="City or State" />
+      <ul class="suggestions">
+        <li>Filter for a city</li>
+        <li>or a state</li>
+      </ul>
+    </form>
+    <script>
+      const endpoint =
+        "https://gist.githubusercontent.com/Miserlou/c5cd8364bf9b2420bb29/raw/2bf258763cdddd704f8ffd3ea9a3e81d25e2c6f6/cities.json";
 
-  <form class="search-form">
-    <input type="text" class="search" placeholder="City or State">
-    <ul class="suggestions">
-      <li>Filter for a city</li>
-      <li>or a state</li>
-    </ul>
-  </form>
-<script>
-const endpoint = 'https://gist.githubusercontent.com/Miserlou/c5cd8364bf9b2420bb29/raw/2bf258763cdddd704f8ffd3ea9a3e81d25e2c6f6/cities.json';
+      const cities = [];
 
-</script>
-</body>
+      fetch(endpoint)
+        .then((blob) => blob.json())
+        .then((data) => {
+          cities.push(...data);
+        });
+
+      const search = document.querySelector(".search");
+      const suggestions = document.querySelector(".suggestions");
+
+      // Returns a function, that, as long as it continues to be invoked, will not
+      // be triggered. The function will be called after it stops being called for
+      // N milliseconds. If `immediate` is passed, trigger the function on the
+      // leading edge, instead of the trailing.
+      function debounce(func, wait, immediate) {
+        var timeout;
+        return function () {
+          var context = this,
+            args = arguments;
+          var later = function () {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
+          };
+          var callNow = immediate && !timeout;
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+          if (callNow) func.apply(context, args);
+        };
+      }
+
+      function filterMatch(inputValue) {
+        return cities.filter((place) => {
+          const regex = new RegExp(inputValue, "gi");
+
+          return place.city.match(regex) || place.state.match(regex);
+        });
+      }
+
+      function numberWithCommas(x) {
+        return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      }
+
+      const handleInputChange = debounce(function () {
+        console.log(this.value);
+        const matchedValues = filterMatch(this.value);
+        const html = matchedValues
+          .map((value) => {
+            const regex = new RegExp(this.value, "gi");
+            const cityName = value.city.replace(
+              regex,
+              `<span class="hl">${this.value}</span>`
+            );
+            const stateName = value.state.replace(
+              regex,
+              `<span class="hl">${this.value}</span>`
+            );
+            return `
+            <li>
+              <span class="name">${cityName}, ${stateName}</span>
+              <span class="population">${numberWithCommas(
+                value.population
+              )}</span>
+            </li>
+          `;
+          })
+          .join("");
+
+        suggestions.innerHTML = html;
+      }, 250);
+
+      search.addEventListener("change", handleInputChange);
+      search.addEventListener("keyup", handleInputChange);
+    </script>
+  </body>
 </html>
